@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4B3FE3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="自动诵读">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>自动诵读</title>
+  <style>
+    :root {
+      --primary: #4B3FE3;
+      --primary-light: #6B5FF7;
+      --primary-dark: #3C2ECA;
+      --bg: #F5F5FA;
+      --card: #FFFFFF;
+      --text: #1A1A2E;
+      --text-secondary: #6B7280;
+      --border: #E5E7EB;
+      --success: #10B981;
+      --danger: #EF4444;
+      --shadow: 0 2px 12px rgba(75, 63, 227, 0.08);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 100px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 48px 20px 24px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .header p {
+      font-size: 13px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* 文件上传区 */
+    .upload-area {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 16px;
+    }
+
+    .upload-area:active {
+      border-color: var(--primary);
+      background: rgba(75, 63, 227, 0.03);
+      transform: scale(0.98);
+    }
+
+    .upload-area.drag-over {
+      border-color: var(--primary);
+      background: rgba(75, 63, 227, 0.05);
+    }
+
+    .upload-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      background: var(--bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .upload-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    #fileInput { display: none; }
+
+    /* 文件信息 */
+    .file-info {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .file-info.show { display: flex; }
+
+    .file-info-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .file-info-text { flex: 1; min-width: 0; }
+
+    .file-info-name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-info-size {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .file-info-close {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: var(--bg);
+      border-radius: 50%;
+      font-size: 14px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* 内容显示 */
+    .content-card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .content-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .content-header span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .content-body {
+      padding: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 15px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .content-body::-webkit-scrollbar { width: 3px; }
+    .content-body::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .content-body .sentence {
+      padding: 2px 0;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .content-body .sentence.active {
+      background: rgba(75, 63, 227, 0.1);
+      color: var(--primary-dark);
+    }
+
+    /* 设置面板 */
+    .settings {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .settings-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .setting-row:last-child { margin-bottom: 0; }
+
+    .setting-label {
+      font-size: 14px;
+      width: 56px;
+      flex-shrink: 0;
+    }
+
+    .setting-slider {
+      flex: 1;
+      margin: 0 12px;
+    }
+
+    .setting-slider input[type="range"] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .setting-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(75, 63, 227, 0.3);
+    }
+
+    .setting-value {
+      font-size: 13px;
+      color: var(--primary);
+      font-weight: 600;
+      width: 36px;
+      text-align: right;
+    }
+
+    .voice-select {
+      flex: 1;
+      margin-left: 12px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+    }
+
+    /* 控制栏 */
+    .controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+    }
+
+    .ctrl-btn {
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .ctrl-btn:active { transform: scale(0.92); }
+
+    .ctrl-btn.primary {
+      width: 60px;
+      height: 60px;
+      background: var(--primary);
+      color: white;
+      font-size: 26px;
+      box-shadow: 0 4px 16px rgba(75, 63, 227, 0.3);
+    }
+
+    .ctrl-btn.primary:active {
+      background: var(--primary-dark);
+    }
+
+    /* 进度 */
+    .progress-bar {
+      position: fixed;
+      bottom: 84px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--border);
+      z-index: 101;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    /* 提示消息 */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--text);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      z-index: 999;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* 加载 */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .loading.show { display: block; }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 安装提示 */
+    .install-banner {
+      display: none;
+      background: var(--primary);
+      color: white;
+      padding: 10px 16px;
+      text-align: center;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .install-banner.show { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- 安装提示 -->
+  <div class="install-banner" id="installBanner" onclick="installApp()">
+    点击此处将"自动诵读"添加到主屏幕
+  </div>
+
+  <div class="header">
+    <h1>自动诵读</h1>
+    <p>打开文件，自动为你朗读</p>
+  </div>
+
+  <div class="container">
+    <!-- 上传区域 -->
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">&#128196;</div>
+      <div class="upload-title">选择文件</div>
+      <div class="upload-hint">支持 .txt 和 .docx 格式</div>
+    </div>
+    <input type="file" id="fileInput" accept=".txt,.docx">
+
+    <!-- 文件信息 -->
+    <div class="file-info" id="fileInfo">
+      <div class="file-info-icon" id="fileIcon">&#128196;</div>
+      <div class="file-info-text">
+        <div class="file-info-name" id="fileName"></div>
+        <div class="file-info-size" id="fileSize"></div>
+      </div>
+      <button class="file-info-close" onclick="clearFile()">&times;</button>
+    </div>
+
+    <!-- 加载中 -->
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span style="font-size:13px;color:var(--text-secondary)">正在解析文件...</span>
+    </div>
+
+    <!-- 内容区域 -->
+    <div class="content-card" id="contentCard" style="display:none">
+      <div class="content-header">
+        <span id="progressText">0 / 0 段</span>
+        <span id="statusText">准备就绪</span>
+      </div>
+      <div class="content-body" id="contentBody"></div>
+    </div>
+
+    <!-- 设置 -->
+    <div class="settings" id="settingsPanel">
+      <div class="settings-title">朗读设置</div>
+
+      <div class="setting-row">
+        <span class="setting-label">语音</span>
+        <select class="voice-select" id="voiceSelect">
+          <option>加载中...</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">语速</span>
+        <div class="setting-slider">
+          <input type="range" id="rateSlider" min="0.3" max="2" step="0.1" value="1">
+        </div>
+        <span class="setting-value" id="rateValue">1.0</span>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">音调</span>
+        <div class="setting-slider">
+          <input type="range" id="pitchSlider" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <span class="setting-value" id="pitchValue">1.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 进度条 -->
+  <div class="progress-bar" id="progressBar" style="display:none">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <!-- 控制栏 -->
+  <div class="controls" id="controls" style="display:none">
+    <button class="ctrl-btn" id="btnPrev" onclick="prevSentence()">&#9198;</button>
+    <button class="ctrl-btn primary" id="btnPlay" onclick="togglePlay()">&#9654;</button>
+    <button class="ctrl-btn" id="btnNext" onclick="nextSentence()">&#9197;</button>
+    <button class="ctrl-btn" id="btnStop" onclick="stopReading()">&#9632;</button>
+  </div>
+
+  <!-- 提示 -->
+  <div class="toast" id="toast"></div>
+
+  <!-- mammoth.js for .docx -->
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+
+  <script>
+    // ===== 全局状态 =====
+    const state = {
+      sentences: [],      // 分段后的文本
+      currentIndex: -1,   // 当前朗读段落
+      isPlaying: false,
+      isPaused: false,
+      fileName: '',
+      voices: [],
+      utterance: null
+    };
+
+    // ===== DOM 元素 =====
+    const $ = id => document.getElementById(id);
+
+    // ===== 语音初始化 =====
+    function initVoices() {
+      const loadVoices = () => {
+        const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('zh'));
+        state.voices = voices.length > 0 ? voices : speechSynthesis.getVoices();
+
+        const select = $('voiceSelect');
+        select.innerHTML = '';
+        state.voices.forEach((v, i) => {
+          const opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = v.name.substring(0, 20) + (v.lang ? ` (${v.lang})` : '');
+          select.appendChild(opt);
+        });
+      };
+
+      loadVoices();
+      speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    }
+
+    // ===== 文件处理 =====
+    $('fileInput').addEventListener('change', handleFile);
+
+    // 拖拽支持
+    const uploadArea = $('uploadArea');
+    uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadArea.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+    });
+
+    async function handleFile(e) {
+      const file = e.target.files[0];
+      if (file) processFile(file);
+    }
+
+    async function processFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      if (!['txt', 'docx'].includes(ext)) {
+        showToast('仅支持 .txt 和 .docx 格式');
+        return;
+      }
+
+      // 显示文件信息
+      $('fileName').textContent = file.name;
+      $('fileSize').textContent = formatSize(file.size);
+      $('fileIcon').innerHTML = ext === 'txt' ? '&#128196;' : '&#128462;';
+      $('fileInfo').classList.add('show');
+      $('loading').classList.add('show');
+      $('contentCard').style.display = 'none';
+      $('controls').style.display = 'none';
+      $('progressBar').style.display = 'none';
+
+      state.fileName = file.name;
+
+      try {
+        let text = '';
+        if (ext === 'txt') {
+          text = await file.text();
+        } else {
+          // .docx
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.convertToHtml({ arrayBuffer });
+          const div = document.createElement('div');
+          div.innerHTML = result.value;
+          text = div.textContent || div.innerText || '';
+        }
+
+        if (!text.trim()) {
+          showToast('文件内容为空');
+          $('loading').classList.remove('show');
+          return;
+        }
+
+        // 分段（按句号、换行、问号、感叹号等分割）
+        state.sentences = splitText(text);
+        state.currentIndex = -1;
+        state.isPlaying = false;
+        state.isPaused = false;
+
+        renderContent();
+        $('loading').classList.remove('show');
+        $('contentCard').style.display = '';
+        $('controls').style.display = '';
+        $('progressBar').style.display = '';
+        $('btnPlay').innerHTML = '&#9654;';
+        $('progressText').textContent = `0 / ${state.sentences.length} 段`;
+        $('statusText').textContent = '准备就绪';
+        $('progressFill').style.width = '0%';
+
+        showToast('文件加载成功，点击播放开始朗读');
+
+      } catch (err) {
+        $('loading').classList.remove('show');
+        showToast('文件解析失败: ' + err.message);
+      }
+    }
+
+    function splitText(text) {
+      // 先按换行分段，再按句号等分割，确保每段不会太长
+      const lines = text.split(/\n+/);
+      const result = [];
+      const pattern = /([^。！？；\n]+[。！？；])/g;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // 尝试按句分割
+        const matches = trimmed.match(pattern);
+        if (matches && matches.length > 0) {
+          result.push(...matches);
+        } else {
+          // 没有句号的长句，超过 100 字则强制分割
+          if (trimmed.length > 100) {
+            for (let i = 0; i < trimmed.length; i += 100) {
+              result.push(trimmed.substring(i, i + 100));
+            }
+          } else {
+            result.push(trimmed);
+          }
+        }
+      }
+      return result;
+    }
+
+    function renderContent() {
+      const body = $('contentBody');
+      body.innerHTML = '';
+      state.sentences.forEach((s, i) => {
+        const div = document.createElement('div');
+        div.className = 'sentence';
+        div.id = `sentence-${i}`;
+        div.textContent = s;
+        body.appendChild(div);
+      });
+    }
+
+    function clearFile() {
+      stopReading();
+      state.sentences = [];
+      state.currentIndex = -1;
+      $('fileInput').value = '';
+      $('fileInfo').classList.remove('show');
+      $('contentCard').style.display = 'none';
+      $('controls').style.display = 'none';
+      $('progressBar').style.display = 'none';
+    }
+
+    // ===== 朗读控制 =====
+    function togglePlay() {
+      if (state.sentences.length === 0) {
+        showToast('请先选择文件');
+        return;
+      }
+
+      if (state.isPaused) {
+        speechSynthesis.resume();
+        state.isPaused = false;
+        state.isPlaying = true;
+        $('btnPlay').innerHTML = '&#10074;&#10074;';
+        $('statusText').textContent = '朗读中...';
+        return;
+      }
+
+      if (state.isPlaying) {
+        speechSynthesis.pause();
+        state.isPaused = true;
+        state.isPlaying = false;
+        $('btnPlay').innerHTML = '&#9654;';
+        $('statusText').textContent = '已暂停';
+        return;
+      }
+
+      // 开始朗读
+      if (state.currentIndex < 0) state.currentIndex = 0;
+      speakSentence(state.currentIndex);
+    }
+
+    function speakSentence(index) {
+      if (index >= state.sentences.length) {
+        stopReading();
+        showToast('朗读完成');
+        return;
+      }
+
+      state.currentIndex = index;
+      state.isPlaying = true;
+      state.isPaused = false;
+
+      // 更新 UI
+      $('btnPlay').innerHTML = '&#10074;&#10074;';
+      $('statusText').textContent = '朗读中...';
+      updateProgress();
+
+      // 高亮当前段落
+      document.querySelectorAll('.sentence.active').forEach(el => el.classList.remove('active'));
+      const el = document.getElementById(`sentence-${index}`);
+      if (el) {
+        el.classList.add('active');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      // 取消之前的朗读
+      speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(state.sentences[index]);
+      utterance.lang = 'zh-CN';
+      utterance.rate = parseFloat($('rateSlider').value);
+      utterance.pitch = parseFloat($('pitchSlider').value);
+
+      // 设置选中的语音
+      const voiceIdx = parseInt($('voiceSelect').value);
+      if (state.voices[voiceIdx]) {
+        utterance.voice = state.voices[voiceIdx];
+      }
+
+      utterance.onend = () => {
+        if (state.isPlaying && !state.isPaused) {
+          speakSentence(index + 1);
+        }
+      };
+
+      utterance.onerror = (e) => {
+        if (e.error !== 'interrupted' && e.error !== 'canceled') {
+          console.error('TTS error:', e.error);
+          // 自动跳到下一段
+          if (state.isPlaying) speakSentence(index + 1);
+        }
+      };
+
+      state.utterance = utterance;
+      speechSynthesis.speak(utterance);
+    }
+
+    function stopReading() {
+      speechSynthesis.cancel();
+      state.isPlaying = false;
+      state.isPaused = false;
+      $('btnPlay').innerHTML = '&#9654;';
+      $('statusText').textContent = '已停止';
+      document.querySelectorAll('.sentence.active').forEach(el => el.classList.remove('active'));
+    }
+
+    function prevSentence() {
+      if (state.sentences.length === 0) return;
+      const idx = Math.max(0, (state.currentIndex < 0 ? 0 : state.currentIndex) - 1);
+      state.isPaused = false;
+      speakSentence(idx);
+    }
+
+    function nextSentence() {
+      if (state.sentences.length === 0) return;
+      const idx = Math.min(state.sentences.length - 1, (state.currentIndex < 0 ? 0 : state.currentIndex) + 1);
+      state.isPaused = false;
+      speakSentence(idx);
+    }
+
+    function updateProgress() {
+      const total = state.sentences.length;
+      const current = state.currentIndex + 1;
+      $('progressText').textContent = `${current} / ${total} 段`;
+      $('progressFill').style.width = `${(current / total) * 100}%`;
+    }
+
+    // ===== 设置监听 =====
+    $('rateSlider').addEventListener('input', e => {
+      $('rateValue').textContent = parseFloat(e.target.value).toFixed(1);
+    });
+
+    $('pitchSlider').addEventListener('input', e => {
+      $('pitchValue').textContent = parseFloat(e.target.value).toFixed(1);
+    });
+
+    // ===== 工具函数 =====
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function showToast(msg) {
+      const toast = $('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // ===== PWA 安装 =====
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      $('installBanner').classList.add('show');
+    });
+
+    function installApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(r => {
+          deferredPrompt = null;
+          $('installBanner').classList.remove('show');
+        });
+      }
+    }
+
+    // ===== Chrome TTS 长文本保活（解决约 15 秒后自动停止的 bug）=====
+    setInterval(() => {
+      if (state.isPlaying && !state.isPaused && speechSynthesis.speaking) {
+        speechSynthesis.pause();
+        speechSynthesis.resume();
+      }
+    }, 10000);
+
+    // ===== 注册 Service Worker =====
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.warn('Service Worker 注册失败:', err);
+      });
+    }
+
+    // ===== 页面初始化 =====
+    initVoices();
+
+    // 检测 TTS 支持
+    if (!('speechSynthesis' in window)) {
+      showToast('当前浏览器不支持语音朗读功能');
+    }
+  </script>
+</body>
+</html>
