@@ -1,0 +1,27 @@
+{
+  "name": "自动诵读",
+  "short_name": "诵读",
+  "description": "打开 txt 和 Word 文件，自动为你朗读",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#F5F5FA",
+  "theme_color": "#4B3FE3",
+  "orientation": "portrait",
+  "categories": ["utilities", "productivity"],
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
